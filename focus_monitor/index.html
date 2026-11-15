@@ -1,0 +1,17 @@
+<!doctype html><html lang="uk"><head><meta charset="utf-8"><style>
+body{margin:0;background:transparent;font:14px system-ui,sans-serif;color:#243453}.bar{border:1px solid #b9dcd5;background:#eefaf6;border-radius:10px;padding:9px 12px}.small{font-size:12px;color:#48605b;margin-top:3px}</style></head><body><div class="bar"><b>🛡️ Контроль вкладки активний</b> · <span id="counter">0 із 3</span><div class="small">Вихід із вкладки буде зафіксований після повернення. Третій вихід автоматично завершує тест.</div></div>
+<script>
+(function(){
+  const post=(type, extra={})=>window.parent.postMessage({isStreamlitMessage:true,type,...extra},'*');
+  let session='', data=null, lastSent='', ready=false;
+  const key=()=>`math_school_focus_v7_${session}`;
+  function load(){try{let value=JSON.parse(sessionStorage.getItem(key())||'null');return value&&Array.isArray(value.events)?value:null;}catch(e){return null;}}
+  function save(){try{sessionStorage.setItem(key(),JSON.stringify(data));}catch(e){}}
+  function send(){if(!ready||!data)return;let payload={session:session,events:data.events,hidden_since:data.hidden_since};let json=JSON.stringify(payload);if(json!==lastSent){lastSent=json;post('streamlit:setComponentValue',{value:payload,dataType:'json'});}document.getElementById('counter').textContent=data.events.length+' із 3';}
+  function visibility(){if(!ready||!data)return;const now=Date.now();if(document.hidden){if(data.hidden_since==null){data.hidden_since=now;save();}}else if(data.hidden_since!=null){const start=data.hidden_since;data.hidden_since=null;data.events.push({at:new Date(start).toISOString(),returned_at:new Date(now).toISOString(),seconds:Math.round((now-start)/100)/10});save();send();}}
+  window.addEventListener('message',event=>{if(!event.data||event.data.type!=='streamlit:render')return;const next=String((event.data.args||{}).session||'');if(!next)return;if(next!==session){session=next;data=load()||{events:[],hidden_since:null};lastSent='';ready=true;}visibility();send();post('streamlit:setFrameHeight',{height:75});});
+  document.addEventListener('visibilitychange',visibility);
+  window.addEventListener('pagehide',()=>{if(ready&&data&&data.hidden_since==null){data.hidden_since=Date.now();save();}});
+  post('streamlit:componentReady',{apiVersion:1});post('streamlit:setFrameHeight',{height:75});
+})();
+</script></body></html>
